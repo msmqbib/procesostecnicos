@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Mapa de Calor - Corrección de Errores</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+
+        h2 {
+            margin-top: 0;
+            color: #2c3e50;
+            text-align: center;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .stats {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            padding: 8px 15px;
+            border-radius: 8px;
+            text-align: center;
+            min-width: 80px;
+        }
+
+        .stat-number {
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 0.7em;
+            color: #7f8c8d;
+        }
+
+        .progress-container {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .progress-bar {
+            background: #ecf0f1;
+            border-radius: 25px;
+            overflow: hidden;
+            height: 35px;
+        }
+
+        .progress-fill {
+            background: #27ae60;
+            height: 100%;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        .person-selector {
+            display: flex;
+            gap: 10px;
+            background: #f8f9fa;
+            padding: 8px 15px;
+            border-radius: 8px;
+            align-items: center;
+        }
+
+        .person-btn {
+            padding: 8px 20px;
+            border: 2px solid;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .person-btn.alejandro {
+            background: #34495e;
+            color: white;
+            border-color: #2c3e50;
+        }
+
+        .person-btn.martha {
+            background: #95a5a6;
+            color: #2c3e50;
+            border-color: #7f8c8d;
+        }
+
+        .person-btn.active {
+            transform: scale(1.05);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .btn-danger { background: #e74c3c; color: white; }
+        .btn-success { background: #27ae60; color: white; }
+        .btn-info { background: #9b59b6; color: white; }
+
+        .filter-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-left: auto;
+        }
+
+        select {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+        }
+
+        .batch-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .grid-container {
+            overflow-x: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            max-height: 60vh;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(50, 55px);
+            gap: 3px;
+            background: #f0f2f5;
+            padding: 3px;
+        }
+
+        .cell {
+            width: 55px;
+            height: 55px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            cursor: pointer;
+            transition: all 0.1s;
+            border-radius: 6px;
+            font-weight: bold;
+            color: white;
+            position: relative;
+            text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
+        }
+
+        /* Colores de errores */
+        .cell-error-Año { background-color: #119da4; }
+        .cell-error-Idioma { background-color: #0c7489; }
+        .cell-error-Mayúscula { background-color: #13505b; }
+        
+        /* Marcas de corrección */
+        .cell-corregido-alejandro {
+            border: 3px solid #040404;
+        }
+        .cell-corregido-alejandro::after {
+            content: "✓A";
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            font-size: 8px;
+            background: rgba(4,4,4,0.9);
+            padding: 2px 3px;
+            border-radius: 3px;
+        }
+        
+        .cell-corregido-martha {
+            border: 3px solid #d7d9ce;
+        }
+        .cell-corregido-martha::after {
+            content: "✓M";
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            font-size: 8px;
+            background: rgba(215,217,206,0.9);
+            padding: 2px 3px;
+            border-radius: 3px;
+            color: #2c3e50;
+        }
+
+        .cell:hover {
+            transform: scale(1.05);
+            z-index: 1;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .legend {
+            margin-top: 20px;
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+        }
+
+        .legend-color {
+            width: 25px;
+            height: 25px;
+            border-radius: 4px;
+        }
+
+        .legend-border {
+            width: 25px;
+            height: 25px;
+            border: 3px solid;
+            border-radius: 4px;
+        }
+
+        .info {
+            margin-top: 15px;
+            padding: 12px;
+            background: #e8f4fd;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #2c3e50;
+            text-align: center;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .grid { grid-template-columns: repeat(40, 55px); }
+        }
+        @media (max-width: 900px) {
+            .grid { grid-template-columns: repeat(30, 50px); }
+            .cell { width: 50px; height: 50px; font-size: 8px; }
+        }
+        @media (max-width: 600px) {
+            .grid { grid-template-columns: repeat(20, 45px); }
+            .cell { width: 45px; height: 45px; font-size: 7px; }
+            .person-btn { padding: 5px 12px; font-size: 12px; }
+            button { padding: 6px 12px; font-size: 11px; }
+        }
+
+        /* Modal de confirmación */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 300px;
+        }
+        .modal-content button {
+            margin: 10px 5px;
+            padding: 8px 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>📊 Mapa de Calor - Corrección Colaborativa</h2>
+    
+    <div class="header">
+        <div class="stats">
+            <div class="stat-card"><div class="stat-number" id="totalRegistros">0</div><div class="stat-label">Total</div></div>
+            <div class="stat-card"><div class="stat-number" id="corregidosAlejandro" style="color:#040404;">0</div><div class="stat-label">Alejandro</div></div>
+            <div class="stat-card"><div class="stat-number" id="corregidosMartha" style="color:#7f8c8d;">0</div><div class="stat-label">Martha</div></div>
+            <div class="stat-card"><div class="stat-number" id="pendientes" style="color:#e74c3c;">0</div><div class="stat-label">Pendientes</div></div>
+        </div>
+        
+        <div class="progress-container">
+            <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width: 0%">0%</div></div>
+        </div>
+        
+        <div class="person-selector">
+            <span style="font-weight: bold;">✏️ Corrigiendo:</span>
+            <div id="alejandroBtn" class="person-btn alejandro active">Alejandro</div>
+            <div id="marthaBtn" class="person-btn martha">Martha</div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn-danger" id="limpiarTodoBtn">🗑️ Limpiar todo</button>
+        <button class="btn-success" id="exportarResumenBtn">📊 Exportar resumen</button>
+        <button class="btn-info" id="exportarDetalleBtn">📋 Exportar detalle</button>
+        <div class="filter-group">
+            <label>🔍 Filtrar:</label>
+            <select id="filterError">
+                <option value="todos">Todos</option>
+                <option value="Año">Solo Año</option>
+                <option value="Idioma">Solo Idioma</option>
+                <option value="Mayúscula">Solo Mayúscula</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="batch-control">
+        <label>📑 Navegar por lote:</label>
+        <select id="batchSelect"></select>
+        <span id="batchInfo"></span>
+    </div>
+
+    <div class="grid-container">
+        <div id="grid" class="grid"></div>
+    </div>
+
+    <div class="legend">
+        <div class="legend-item"><div class="legend-color" style="background: #119da4;"></div><span>Error Año</span></div>
+        <div class="legend-item"><div class="legend-color" style="background: #0c7489;"></div><span>Error Idioma</span></div>
+        <div class="legend-item"><div class="legend-color" style="background: #13505b;"></div><span>Error Mayúscula</span></div>
+        <div class="legend-item"><div class="legend-border" style="border-color: #040404;"></div><span>Corregido (Alejandro ✓A)</span></div>
+        <div class="legend-item"><div class="legend-border" style="border-color: #d7d9ce;"></div><span>Corregido (Martha ✓M)</span></div>
+    </div>
+
+    <div class="info">
+        💡 <strong>Instrucciones:</strong> Haz clic en cualquier error para marcarlo como corregido.<br>
+        ✅ <strong>Marcar:</strong> Click normal &nbsp;&nbsp;|&nbsp;&nbsp; ❌ <strong>Desmarcar:</strong> Click y confirmar<br>
+        📌 Los datos se guardan automáticamente en tu navegador.
+    </div>
+</div>
+
+<!-- Modal de confirmación -->
+<div id="confirmModal" class="modal">
+    <div class="modal-content">
+        <h3>⚠️ Desmarcar registro</h3>
+        <p id="modalMessage">¿Estás seguro de que quieres desmarcar este registro?</p>
+        <button id="confirmYes" style="background: #e74c3c; color: white;">Sí, desmarcar</button>
+        <button id="confirmNo" style="background: #95a5a6; color: white;">Cancelar</button>
+    </div>
+</div>
+
+<script>
+    // ============================================
+    // DATOS DE ERRORES - AGREGAR AQUÍ TUS REGISTROS
+    // ============================================
+    
+    let errores = new Map();
+    
+    // Función para agregar errores (usa este formato)
+    function agregarError(id, tipo) {
+        errores.set(id, tipo);
+    }
+    
+    // ============================================
+    // EJEMPLOS - REEMPLAZA CON TUS DATOS REALES
+    // ============================================
+    // Puedes pegar aquí tu lista completa de errores
+    // Formato: agregarError(NUMERO, "TIPO");
+    // Tipos válidos: "Año", "Idioma", "Mayúscula"
+    
+    agregarError(220, "Año");
+    agregarError(714, "Año");
+    agregarError(786, "Año");
+    agregarError(992, "Año");
+    agregarError(1186, "Año");
+    agregarError(1205, "Año");
+    agregarError(13741, "Idioma");
+    agregarError(20768, "Mayúscula");
+    agregarError(21225, "Mayúscula");
+    agregarError(21259, "Mayúscula");
+    agregarError(24043, "Idioma");
+    agregarError(30049, "Mayúscula");
+    agregarError(38991, "Mayúscula");
+    agregarError(40614, "Idioma");
+    agregarError(41087, "Mayúscula");
+    agregarError(43143, "Año");
+    agregarError(43284, "Idioma");
+    agregarError(43957, "Idioma");
+    agregarError(58555, "Idioma");
+    agregarError(59063, "Idioma");
+    
+    // ============================================
+    // CONTINÚA AGREGANDO TUS REGISTROS AQUÍ
+    // ============================================
+    // Puedes copiar y pegar muchas líneas como estas:
+    // agregarError(12345, "Año");
+    // agregarError(67890, "Idioma");
+    // agregarError(11111, "Mayúscula");
+    
+    // ============================================
+    // CONFIGURACIÓN - NO MODIFICAR
+    // ============================================
+    
+    let correcciones = new Map();
+    let personaActual = 'alejandro';
+    let loteActual = 0;
+    let filtroActual = "todos";
+    let todosLosIds = Array.from(errores.keys()).sort((a,b) => a-b);
+    let TOTAL_REGISTROS = todosLosIds.length;
+    let pendingUnmarkId = null; // Para el modal
+    
+    // Configuración de lotes
+    let REGISTROS_POR_LOTE = 4000;
+    let TOTAL_LOTES = Math.ceil(TOTAL_REGISTROS / REGISTROS_POR_LOTE);
+    
+    // Elementos DOM
+    const gridContainer = document.getElementById('grid');
+    const batchSelect = document.getElementById('batchSelect');
+    const batchInfoSpan = document.getElementById('batchInfo');
+    const totalRegistrosSpan = document.getElementById('totalRegistros');
+    const corregidosAlejandroSpan = document.getElementById('corregidosAlejandro');
+    const corregidosMarthaSpan = document.getElementById('corregidosMartha');
+    const pendientesSpan = document.getElementById('pendientes');
+    const progressFill = document.getElementById('progressFill');
+    const alejandroBtn = document.getElementById('alejandroBtn');
+    const marthaBtn = document.getElementById('marthaBtn');
+    const confirmModal = document.getElementById('confirmModal');
+    const modalMessage = document.getElementById('modalMessage');
+    
+    function actualizarEstadisticas() {
+        let corrAlejandro = 0, corrMartha = 0;
+        for (let persona of correcciones.values()) {
+            if (persona === 'alejandro') corrAlejandro++;
+            else if (persona === 'martha') corrMartha++;
+        }
+        const pendientes = TOTAL_REGISTROS - (corrAlejandro + corrMartha);
+        const porcentaje = ((corrAlejandro + corrMartha) / TOTAL_REGISTROS) * 100;
+        
+        totalRegistrosSpan.textContent = TOTAL_REGISTROS.toLocaleString();
+        corregidosAlejandroSpan.textContent = corrAlejandro.toLocaleString();
+        corregidosMarthaSpan.textContent = corrMartha.toLocaleString();
+        pendientesSpan.textContent = pendientes.toLocaleString();
+        progressFill.style.width = `${porcentaje}%`;
+        progressFill.textContent = `${porcentaje.toFixed(1)}%`;
+    }
+    
+    function getClassForError(tipo) {
+        switch(tipo) {
+            case 'Año': return 'cell-error-Año';
+            case 'Idioma': return 'cell-error-Idioma';
+            case 'Mayúscula': return 'cell-error-Mayúscula';
+            default: return '';
+        }
+    }
+    
+    function guardarCorrecciones() {
+        localStorage.setItem('correccionesErrores', JSON.stringify(Array.from(correcciones.entries())));
+    }
+    
+    function dibujarGrid() {
+        const inicioLote = loteActual * REGISTROS_POR_LOTE;
+        const finLote = Math.min(inicioLote + REGISTROS_POR_LOTE, TOTAL_REGISTROS);
+        let registrosLote = todosLosIds.slice(inicioLote, finLote);
+        
+        if (filtroActual !== "todos") {
+            registrosLote = registrosLote.filter(id => errores.get(id) === filtroActual);
+        }
+        
+        gridContainer.innerHTML = '';
+        const grid = document.createElement('div');
+        grid.className = 'grid';
+        
+        for (let i = 0; i < registrosLote.length; i++) {
+            const id = registrosLote[i];
+            const tipoError = errores.get(id);
+            const personaCorrectora = correcciones.get(id);
+            
+            const celda = document.createElement('div');
+            let className = `cell ${getClassForError(tipoError)}`;
+            if (personaCorrectora === 'alejandro') className += ' cell-corregido-alejandro';
+            else if (personaCorrectora === 'martha') className += ' cell-corregido-martha';
+            
+            celda.className = className;
+            celda.textContent = id;
+            celda.title = `Registro ${id} - Error: ${tipoError}${personaCorrectora ? ` ✓ Corregido por ${personaCorrectora === 'alejandro' ? 'Alejandro' : 'Martha'}` : ' ❌ Pendiente'}`;
+            
+            celda.addEventListener('click', (function(registroId) {
+                return function() {
+                    const yaCorregido = correcciones.has(registroId);
+                    
+                    if (yaCorregido) {
+                        // Desmarcar - mostrar confirmación
+                        pendingUnmarkId = registroId;
+                        modalMessage.textContent = `¿Estás seguro de desmarcar el registro ${registroId}?`;
+                        confirmModal.style.display = 'flex';
+                    } else {
+                        // Marcar nuevo
+                        correcciones.set(registroId, personaActual);
+                        guardarCorrecciones();
+                        actualizarEstadisticas();
+                        dibujarGrid();
+                    }
+                };
+            })(id));
+            
+            grid.appendChild(celda);
+        }
+        
+        gridContainer.appendChild(grid);
+        
+        const inicioNum = registrosLote.length > 0 ? registrosLote[0] : 0;
+        const finNum = registrosLote.length > 0 ? registrosLote[registrosLote.length - 1] : 0;
+        batchInfoSpan.innerHTML = `Lote ${loteActual + 1}/${TOTAL_LOTES} - Mostrando ${registrosLote.length.toLocaleString()} registros (IDs ${inicioNum.toLocaleString()} - ${finNum.toLocaleString()})`;
+    }
+    
+    function limpiarTodo() {
+        if (confirm('⚠️ ¿Estás seguro de que quieres limpiar TODAS las correcciones? Esta acción no se puede deshacer.')) {
+            correcciones.clear();
+            guardarCorrecciones();
+            actualizarEstadisticas();
+            dibujarGrid();
+        }
+    }
+    
+    function exportarResumen() {
+        let corrAlejandro = 0, corrMartha = 0;
+        for (let persona of correcciones.values()) {
+            if (persona === 'alejandro') corrAlejandro++;
+            else if (persona === 'martha') corrMartha++;
+        }
+        const pendientes = TOTAL_REGISTROS - (corrAlejandro + corrMartha);
+        const porcentaje = ((corrAlejandro + corrMartha) / TOTAL_REGISTROS * 100).toFixed(1);
+        
+        let resumen = `RESUMEN DE CORRECCIONES
+================================
+Fecha: ${new Date().toLocaleString()}
+Total de errores: ${TOTAL_REGISTROS.toLocaleString()}
+Alejandro: ${corrAlejandro.toLocaleString()}
+Martha: ${corrMartha.toLocaleString()}
+Pendientes: ${pendientes.toLocaleString()}
+Completado: ${porcentaje}%
+
+DETALLE POR TIPO DE ERROR:
+`;
+        const tipos = ["Año", "Idioma", "Mayúscula"];
+        for (let tipo of tipos) {
+            const totalTipo = Array.from(errores.values()).filter(t => t === tipo).length;
+            const alejandroTipo = Array.from(correcciones.entries()).filter(([id, p]) => p === 'alejandro' && errores.get(id) === tipo).length;
+            const marthaTipo = Array.from(correcciones.entries()).filter(([id, p]) => p === 'martha' && errores.get(id) === tipo).length;
+            resumen += `\n${tipo}:\n  Total: ${totalTipo.toLocaleString()}\n  Alejandro: ${alejandroTipo.toLocaleString()}\n  Martha: ${marthaTipo.toLocaleString()}\n  Pendiente: ${(totalTipo - alejandroTipo - marthaTipo).toLocaleString()}`;
+        }
+        
+        const blob = new Blob([resumen], { type: 'text/plain;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `resumen_correcciones_${new Date().toISOString().slice(0,19)}.txt`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+        alert(`✅ Resumen exportado. Corregidos: ${(corrAlejandro + corrMartha).toLocaleString()} de ${TOTAL_REGISTROS.toLocaleString()}`);
+    }
+    
+    function exportarDetalle() {
+        let csv = "ID_Registro,Tipo_Error,Corregido_Persona\n";
+        for (let id of todosLosIds) {
+            const tipo = errores.get(id);
+            const persona = correcciones.get(id) || "";
+            csv += `${id},${tipo},${persona}\n`;
+        }
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `detalle_correcciones_${new Date().toISOString().slice(0,19)}.csv`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+        alert(`✅ Detalle exportado con ${todosLosIds.length.toLocaleString()} registros`);
+    }
+    
+    function inicializarLotes() {
+        batchSelect.innerHTML = '';
+        for (let i = 0; i < TOTAL_LOTES; i++) {
+            const inicio = i * REGISTROS_POR_LOTE;
+            const fin = Math.min(inicio + REGISTROS_POR_LOTE, TOTAL_REGISTROS);
+            const primerId = todosLosIds[inicio] || 0;
+            const ultimoId = todosLosIds[fin - 1] || 0;
+            const option = document.createElement('option');
+            option.value = i;
+            option.textContent = `Lote ${i+1} (${primerId.toLocaleString()} - ${ultimoId.toLocaleString()})`;
+            batchSelect.appendChild(option);
+        }
+        batchSelect.value = loteActual;
+        batchSelect.addEventListener('change', (e) => {
+            loteActual = parseInt(e.target.value);
+            dibujarGrid();
+        });
+    }
+    
+    // Cargar datos guardados
+    const guardado = localStorage.getItem('correccionesErrores');
+    if (guardado) {
+        const arr = JSON.parse(guardado);
+        for (let [id, persona] of arr) {
+            correcciones.set(parseInt(id), persona);
+        }
+    }
+    
+    // Eventos de modales
+    document.getElementById('confirmYes').addEventListener('click', () => {
+        if (pendingUnmarkId !== null) {
+            correcciones.delete(pendingUnmarkId);
+            guardarCorrecciones();
+            actualizarEstadisticas();
+            dibujarGrid();
+            pendingUnmarkId = null;
+        }
+        confirmModal.style.display = 'none';
+    });
+    
+    document.getElementById('confirmNo').addEventListener('click', () => {
+        confirmModal.style.display = 'none';
+        pendingUnmarkId = null;
+    });
+    
+    // Cerrar modal si hacen clic fuera
+    confirmModal.addEventListener('click', (e) => {
+        if (e.target === confirmModal) {
+            confirmModal.style.display = 'none';
+            pendingUnmarkId = null;
+        }
+    });
+    
+    // Eventos de botones
+    alejandroBtn.addEventListener('click', () => {
+        personaActual = 'alejandro';
+        alejandroBtn.classList.add('active');
+        marthaBtn.classList.remove('active');
+    });
+    
+    marthaBtn.addEventListener('click', () => {
+        personaActual = 'martha';
+        marthaBtn.classList.add('active');
+        alejandroBtn.classList.remove('active');
+    });
+    
+    document.getElementById('limpiarTodoBtn').addEventListener('click', limpiarTodo);
+    document.getElementById('exportarResumenBtn').addEventListener('click', exportarResumen);
+    document.getElementById('exportarDetalleBtn').addEventListener('click', exportarDetalle);
+    document.getElementById('filterError').addEventListener('change', (e) => {
+        filtroActual = e.target.value;
+        dibujarGrid();
+    });
+    
+    // Inicializar
+    if (TOTAL_REGISTROS > 0) {
+        inicializarLotes();
+        actualizarEstadisticas();
+        dibujarGrid();
+        console.log(`✅ Mapa cargado con ${errores.size} registros de errores`);
+        console.log(`📊 Organizados en ${TOTAL_LOTES} lotes de ${REGISTROS_POR_LOTE} registros`);
+    } else {
+        gridContainer.innerHTML = '<div style="padding: 40px; text-align: center; color: #e74c3c;">⚠️ No hay registros de error cargados. Agrega tus datos en la sección "DATOS DE ERRORES" del código.</div>';
+        console.warn('⚠️ No hay registros de error agregados');
+    }
+</script>
+</body>
+</html>
