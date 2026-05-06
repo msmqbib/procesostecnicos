@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mapa de Calor - Sincronizado</title>
+    <title>Mapa de Calor</title>
     <style>
         * { box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #f0f2f5; padding: 20px; margin: 0; }
@@ -12,8 +12,8 @@
         .stat-card { background: #f8f9fa; padding: 10px 20px; border-radius: 8px; text-align: center; }
         .stat-number { font-size: 1.5em; font-weight: bold; }
         .progress-bar { background: #ecf0f1; border-radius: 25px; height: 35px; margin: 15px 0; overflow: hidden; }
-        .progress-fill { background: #27ae60; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; transition: width 0.3s; }
-        .grid { display: grid; grid-template-columns: repeat(50, 55px); gap: 3px; background: #f0f2f5; padding: 3px; overflow-x: auto; }
+        .progress-fill { background: #27ae60; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
+        .grid { display: grid; grid-template-columns: repeat(50, 55px); gap: 3px; background: #f0f2f5; padding: 3px; overflow-x: auto; max-height: 60vh; overflow-y: auto; }
         .cell { width: 55px; height: 55px; display: flex; align-items: center; justify-content: center; font-size: 9px; cursor: pointer; border-radius: 6px; font-weight: bold; color: white; position: relative; }
         .cell-error-Año { background-color: #119da4; }
         .cell-error-Idioma { background-color: #0c7489; }
@@ -25,18 +25,18 @@
         button { padding: 10px 20px; margin: 5px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
         .btn-alejandro { background: #34495e; color: white; }
         .btn-martha { background: #95a5a6; color: #2c3e50; }
-        .active { transform: scale(1.05); }
+        .active { transform: scale(1.05); box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         .sync-status { text-align: center; padding: 10px; margin: 10px; border-radius: 8px; }
         .synced { background: #d5f4e6; color: #27ae60; }
         .syncing { background: #ffeaa7; color: #f39c12; }
-        @media (max-width: 900px) { .grid { grid-template-columns: repeat(30, 50px); } .cell { width: 50px; height: 50px; } }
+        @media (max-width: 900px) { .grid { grid-template-columns: repeat(30, 50px); } .cell { width: 50px; height: 50px; font-size: 8px; } }
     </style>
 </head>
 <body>
 <div class="container">
     <h2>📊 Mapa de Calor</h2>
     
-    <div id="syncStatus" class="sync-status synced">🟢 Conectado</div>
+    <div id="syncStatus" class="sync-status syncing">🔄 Conectando...</div>
     
     <div class="stats">
         <div class="stat-card"><div class="stat-number" id="total">0</div><div>Total</div></div>
@@ -47,35 +47,28 @@
     
     <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%">0%</div></div>
     
-    <div style="text-align:center">
+    <div style="text-align:center; margin: 15px 0;">
         <button id="alejandroBtn" class="btn-alejandro active">👤 Alejandro</button>
         <button id="marthaBtn" class="btn-martha">👤 Martha</button>
-        <button id="syncBtn" style="background:#3498db; color:white">🔄 Sincronizar</button>
+        <button id="syncBtn" style="background:#3498db; color:white;">🔄 Sincronizar</button>
     </div>
     
     <div id="grid" class="grid"></div>
     
     <div style="margin-top:15px; padding:10px; background:#e8f4fd; border-radius:8px; text-align:center; font-size:12px;">
-        💡 Haz clic en cualquier error para marcarlo. Los cambios se guardan automáticamente.
+        💡 Haz clic en un error para marcarlo.
     </div>
 </div>
 
 <script>
-    // ============================================
-    // 🔴 ¡¡¡CAMBIAR ESTA URL!!!
-    // Pega aquí tu URL de Google Apps Script
-    // ============================================
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby6U7MnW78DkJsqVxhGksrpWkCCrWn-K0ZF8reAB5_kUpLvl6s1R-byi3Ac1vwqqyWn/exec";
+    // 🔴 🔴 🔴 CAMBIA ESTA URL POR LA TUYA 🔴 🔴 🔴
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyvam6Lqjlf6FGMJKzjsBsG7vubQTQ4QXWdUl4fUQ8DbL4UMdue-VBDux--jlUIf8sc/exec";
     
-    // ============================================
-    // TUS REGISTROS DE ERRORES
-    // Agrega todos aquí con este formato:
-    // errores.set(NUMERO, "TIPO");
-    // Tipos: "Año", "Idioma", "Mayúscula"
-    // ============================================
+    // ========================================
+    // TUS ERRORES - AGREGAR AQUÍ
+    // ========================================
     const errores = new Map();
     
-    // EJEMPLOS (REEMPLAZA CON TUS 58,000 REGISTROS)
     errores.set(220, "Año");
     errores.set(714, "Año");
     errores.set(786, "Año");
@@ -83,47 +76,25 @@
     errores.set(1186, "Año");
     errores.set(13741, "Idioma");
     errores.set(20768, "Mayúscula");
-    errores.set(21225, "Mayúscula");
-    errores.set(21259, "Mayúscula");
-    errores.set(24043, "Idioma");
-    errores.set(30049, "Mayúscula");
-    errores.set(38991, "Mayúscula");
-    errores.set(40614, "Idioma");
-    errores.set(41087, "Mayúscula");
-    errores.set(43143, "Año");
-    errores.set(43284, "Idioma");
-    errores.set(43957, "Idioma");
-    errores.set(58555, "Idioma");
-    errores.set(59063, "Idioma");
-    // ... CONTINÚA AGREGANDO MÁS
+    // ... sigue agregando
     
-    // ============================================
-    // SISTEMA PRINCIPAL
-    // ============================================
-    let correcciones = new Map();  // id -> persona ("alejandro" o "martha")
+    // ========================================
+    // NO CAMBIES DEBAJO
+    // ========================================
+    
+    let correcciones = new Map();
     let personaActual = "alejandro";
     
     const todosIds = Array.from(errores.keys()).sort((a,b) => a-b);
     const TOTAL = todosIds.length;
     
-    // Estado de sincronización
-    let sincronizando = false;
-    
-    // ============================================
-    // CARGAR DATOS DESDE GOOGLE SHEETS
-    // ============================================
-    async function cargarDesdeCloud() {
-        if (sincronizando) return;
-        sincronizando = true;
-        
+    async function cargar() {
         document.getElementById('syncStatus').innerHTML = "🔄 Cargando...";
         document.getElementById('syncStatus').className = "sync-status syncing";
         
         try {
-            const response = await fetch(SCRIPT_URL);
-            const data = await response.json();
-            
-            console.log("📥 Datos recibidos:", data);
+            const resp = await fetch(SCRIPT_URL);
+            const data = await resp.json();
             
             correcciones.clear();
             for (let [id, persona] of Object.entries(data)) {
@@ -132,151 +103,100 @@
                 }
             }
             
-            console.log(`✅ Cargados ${correcciones.size} registros`);
-            document.getElementById('syncStatus').innerHTML = `🟢 Sincronizado (${correcciones.size} correcciones)`;
+            document.getElementById('syncStatus').innerHTML = `🟢 Conectado (${correcciones.size} correcciones)`;
             document.getElementById('syncStatus').className = "sync-status synced";
             
-            actualizarEstadisticas();
-            dibujarGrid();
+            actualizarStats();
+            dibujar();
             
         } catch(e) {
-            console.error("❌ Error al cargar:", e);
+            console.error(e);
             document.getElementById('syncStatus').innerHTML = "⚠️ Error de conexión";
             document.getElementById('syncStatus').className = "sync-status synced";
         }
-        
-        sincronizando = false;
     }
     
-    // ============================================
-    // GUARDAR DATOS EN GOOGLE SHEETS
-    // ============================================
-    async function guardarEnCloud(id, persona) {
+    async function guardar(id, persona) {
         const nombrePersona = persona === "alejandro" ? "Alejandro" : "Martha";
         
-        console.log(`📤 Guardando: ID ${id} -> ${nombrePersona}`);
+        document.getElementById('syncStatus').innerHTML = "💾 Guardando...";
+        
+        // Usar URL con parámetros (GET en lugar de POST)
+        const url = `${SCRIPT_URL}?id=${id}&persona=${encodeURIComponent(nombrePersona)}`;
         
         try {
-            const response = await fetch(SCRIPT_URL, {
-                method: 'POST',
-                mode: 'cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id: id.toString(),
-                    persona: nombrePersona
-                })
-            });
-            
-            const resultado = await response.json();
-            console.log("✅ Respuesta:", resultado);
-            
-            // Recargar datos después de guardar
-            await cargarDesdeCloud();
-            
+            await fetch(url);
+            console.log("Guardado:", id, nombrePersona);
+            await cargar();
         } catch(e) {
-            console.error("❌ Error al guardar:", e);
-            alert("Error al guardar: " + e.message);
+            console.error("Error:", e);
+            document.getElementById('syncStatus').innerHTML = "⚠️ Error al guardar";
         }
     }
     
-    // ============================================
-    // ELIMINAR DATOS EN GOOGLE SHEETS (desmarcar)
-    // ============================================
-    async function eliminarEnCloud(id) {
-        console.log(`📤 Eliminando: ID ${id}`);
+    async function eliminar(id) {
+        document.getElementById('syncStatus').innerHTML = "🗑️ Eliminando...";
+        
+        const url = `${SCRIPT_URL}?id=${id}&persona=`;
         
         try {
-            const response = await fetch(SCRIPT_URL, {
-                method: 'POST',
-                mode: 'cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id: id.toString(),
-                    persona: ""
-                })
-            });
-            
-            const resultado = await response.json();
-            console.log("✅ Eliminado:", resultado);
-            
-            // Recargar datos después de eliminar
-            await cargarDesdeCloud();
-            
+            await fetch(url);
+            console.log("Eliminado:", id);
+            await cargar();
         } catch(e) {
-            console.error("❌ Error al eliminar:", e);
-            alert("Error al eliminar: " + e.message);
+            console.error("Error:", e);
+            document.getElementById('syncStatus').innerHTML = "⚠️ Error al eliminar";
         }
     }
     
-    // ============================================
-    // ACTUALIZAR ESTADÍSTICAS
-    // ============================================
-    function actualizarEstadisticas() {
-        let alejandro = 0, martha = 0;
-        
-        for (let persona of correcciones.values()) {
-            if (persona === "alejandro") alejandro++;
-            if (persona === "martha") martha++;
+    function actualizarStats() {
+        let a = 0, m = 0;
+        for (let p of correcciones.values()) {
+            if (p === "alejandro") a++;
+            if (p === "martha") m++;
         }
+        const pend = TOTAL - a - m;
+        const porc = ((a + m) / TOTAL) * 100;
         
-        const pendientes = TOTAL - alejandro - martha;
-        const porcentaje = ((alejandro + martha) / TOTAL) * 100;
-        
-        document.getElementById('total').textContent = TOTAL.toLocaleString();
-        document.getElementById('alejandroCount').textContent = alejandro.toLocaleString();
-        document.getElementById('marthaCount').textContent = martha.toLocaleString();
-        document.getElementById('pendienteCount').textContent = pendientes.toLocaleString();
-        document.getElementById('progressFill').style.width = `${porcentaje}%`;
-        document.getElementById('progressFill').textContent = `${porcentaje.toFixed(1)}%`;
+        document.getElementById('total').textContent = TOTAL;
+        document.getElementById('alejandroCount').textContent = a;
+        document.getElementById('marthaCount').textContent = m;
+        document.getElementById('pendienteCount').textContent = pend;
+        document.getElementById('progressFill').style.width = porc + "%";
+        document.getElementById('progressFill').textContent = porc.toFixed(1) + "%";
     }
     
-    // ============================================
-    // COLORES POR TIPO DE ERROR
-    // ============================================
-    function getClassForError(tipo) {
-        switch(tipo) {
-            case "Año": return "cell-error-Año";
-            case "Idioma": return "cell-error-Idioma";
-            case "Mayúscula": return "cell-error-Mayúscula";
-            default: return "";
-        }
+    function getColor(tipo) {
+        if (tipo === "Año") return "cell-error-Año";
+        if (tipo === "Idioma") return "cell-error-Idioma";
+        if (tipo === "Mayúscula") return "cell-error-Mayúscula";
+        return "";
     }
     
-    // ============================================
-    // DIBUJAR EL GRID
-    // ============================================
-    function dibujarGrid() {
+    function dibujar() {
         const grid = document.getElementById('grid');
         grid.innerHTML = "";
         
-        for (let i = 0; i < todosIds.length; i++) {
-            const id = todosIds[i];
-            const tipoError = errores.get(id);
-            const personaCorrectora = correcciones.get(id);
+        for (let id of todosIds) {
+            const tipo = errores.get(id);
+            const corregido = correcciones.get(id);
             
             const celda = document.createElement('div');
-            let className = `cell ${getClassForError(tipoError)}`;
-            
-            if (personaCorrectora === "alejandro") {
-                className += " cell-corregido-alejandro";
-            } else if (personaCorrectora === "martha") {
-                className += " cell-corregido-martha";
-            }
-            
-            celda.className = className;
+            let clase = `cell ${getColor(tipo)}`;
+            if (corregido === "alejandro") clase += " cell-corregido-alejandro";
+            if (corregido === "martha") clase += " cell-corregido-martha";
+            celda.className = clase;
             celda.textContent = id;
-            celda.title = `Registro ${id} - Error: ${tipoError}${personaCorrectora ? ` ✓ Corregido por ${personaCorrectora === "alejandro" ? "Alejandro" : "Martha"}` : " ❌ Pendiente"}`;
             
-            celda.onclick = (function(registroId) {
+            celda.onclick = (function(pid) {
                 return async function() {
-                    const yaCorregido = correcciones.has(registroId);
-                    
-                    if (yaCorregido) {
-                        if (confirm(`¿Estás seguro de desmarcar el registro ${registroId}?`)) {
-                            await eliminarEnCloud(registroId);
+                    const ya = correcciones.has(pid);
+                    if (ya) {
+                        if (confirm(`¿Desmarcar registro ${pid}?`)) {
+                            await eliminar(pid);
                         }
                     } else {
-                        await guardarEnCloud(registroId, personaActual);
+                        await guardar(pid, personaActual);
                     }
                 };
             })(id);
@@ -285,9 +205,6 @@
         }
     }
     
-    // ============================================
-    // EVENTOS DE BOTONES
-    // ============================================
     document.getElementById('alejandroBtn').onclick = () => {
         personaActual = "alejandro";
         document.getElementById('alejandroBtn').classList.add('active');
@@ -300,25 +217,10 @@
         document.getElementById('alejandroBtn').classList.remove('active');
     };
     
-    document.getElementById('syncBtn').onclick = () => {
-        cargarDesdeCloud();
-    };
+    document.getElementById('syncBtn').onclick = () => cargar();
     
-    // ============================================
-    // INICIAR
-    // ============================================
-    console.log("🚀 Iniciando mapa...");
-    console.log(`📊 Total de errores: ${TOTAL}`);
-    console.log(`🔗 URL: ${SCRIPT_URL}`);
-    
-    actualizarEstadisticas();
-    dibujarGrid();
-    
-    // Cargar datos desde la nube
-    cargarDesdeCloud();
-    
-    // Auto-sincronizar cada 5 segundos
-    setInterval(cargarDesdeCloud, 5000);
+    cargar();
+    setInterval(cargar, 5000);
 </script>
 </body>
 </html>
