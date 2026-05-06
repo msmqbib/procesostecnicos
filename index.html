@@ -3,30 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mapa de Calor - Por Lotes</title>
+    <title>Mapa de Calor</title>
     <style>
         * { box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #f0f2f5; padding: 20px; margin: 0; }
         .container { max-width: 100%; background: white; border-radius: 12px; padding: 20px; }
         
-        /* Stats */
+        /* ========================================== */
+        /* ESTADÍSTICAS Y BARRA DE PROGRESO           */
+        /* ========================================== */
         .stats { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; justify-content: center; }
-        .stat-card { background: #f8f9fa; padding: 10px 20px; border-radius: 8px; text-align: center; }
-        .stat-number { font-size: 1.5em; font-weight: bold; }
+        .stat-card { background: #f8f9fa; padding: 10px 20px; border-radius: 8px; text-align: center; min-width: 100px; }
+        .stat-card .stat-number { font-size: 1.8em; font-weight: bold; }
+        .stat-card .stat-label { font-size: 0.8em; color: #7f8c8d; margin-top: 5px; }
         
-        /* Progress bar */
-        .progress-bar { background: #ecf0f1; border-radius: 25px; height: 35px; margin: 15px 0; overflow: hidden; }
+        .progress-container { margin: 15px 0; }
+        .progress-bar { background: #ecf0f1; border-radius: 25px; height: 35px; overflow: hidden; }
         .progress-fill { background: #27ae60; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; transition: width 0.3s; }
+        .progress-text { text-align: center; margin-top: 5px; font-size: 12px; color: #7f8c8d; }
         
-        /* Controles de lote */
-        .batch-control { text-align: center; margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 12px; }
-        .batch-btn { background: #3498db; color: white; border: none; padding: 10px 20px; margin: 0 10px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; }
-        .batch-btn:hover { transform: scale(1.05); }
-        .batch-info { font-size: 18px; font-weight: bold; margin: 0 15px; }
-        .lote-selector { margin-top: 10px; }
-        .lote-selector select { padding: 8px 15px; font-size: 14px; border-radius: 8px; margin-left: 10px; }
-        
-        /* Grid */
+        /* ========================================== */
+        /* RESTO DE ESTILOS                          */
+        /* ========================================== */
         .grid { display: grid; grid-template-columns: repeat(50, 55px); gap: 3px; background: #f0f2f5; padding: 3px; overflow-x: auto; max-height: 55vh; overflow-y: auto; }
         .cell { width: 55px; height: 55px; display: flex; align-items: center; justify-content: center; font-size: 9px; cursor: pointer; border-radius: 6px; font-weight: bold; color: white; position: relative; }
         .cell-error-Año { background-color: #119da4; }
@@ -37,7 +35,6 @@
         .cell-corregido-martha { border: 3px solid #d7d9ce; }
         .cell-corregido-martha::after { content: "✓M"; position: absolute; bottom: 2px; right: 2px; font-size: 8px; background: rgba(215,217,206,0.9); padding: 2px 3px; border-radius: 3px; color: #2c3e50; }
         
-        /* Botones */
         button { padding: 10px 20px; margin: 5px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
         .btn-alejandro { background: #34495e; color: white; }
         .btn-martha { background: #95a5a6; color: #2c3e50; }
@@ -45,6 +42,10 @@
         .sync-status { text-align: center; padding: 10px; margin: 10px; border-radius: 8px; }
         .synced { background: #d5f4e6; color: #27ae60; }
         .syncing { background: #ffeaa7; color: #f39c12; }
+        
+        .batch-control { text-align: center; margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 12px; }
+        .batch-btn { background: #3498db; color: white; border: none; padding: 10px 20px; margin: 0 10px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .batch-info { font-size: 18px; font-weight: bold; margin: 0 15px; }
         
         @media (max-width: 900px) { .grid { grid-template-columns: repeat(30, 50px); } .cell { width: 50px; height: 50px; font-size: 8px; } }
     </style>
@@ -55,15 +56,41 @@
     
     <div id="syncStatus" class="sync-status syncing">🔄 Conectando...</div>
     
+    <!-- ========================================== -->
+    <!-- ESTADÍSTICAS (4 tarjetas)                  -->
+    <!-- ========================================== -->
     <div class="stats">
-        <div class="stat-card"><div class="stat-number" id="total">0</div><div>Total</div></div>
-        <div class="stat-card"><div class="stat-number" id="alejandroCount">0</div><div>Alejandro</div></div>
-        <div class="stat-card"><div class="stat-number" id="marthaCount">0</div><div>Martha</div></div>
-        <div class="stat-card"><div class="stat-number" id="pendienteCount">0</div><div>Pendientes</div></div>
+        <div class="stat-card">
+            <div class="stat-number" id="total">0</div>
+            <div class="stat-label">📚 Total errores</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="alejandroCount">0</div>
+            <div class="stat-label">👤 Alejandro</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="marthaCount">0</div>
+            <div class="stat-label">👤 Martha</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="pendienteCount">0</div>
+            <div class="stat-label">⏳ Pendientes</div>
+        </div>
     </div>
     
-    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%">0%</div></div>
+    <!-- ========================================== -->
+    <!-- BARRA DE PROGRESO                          -->
+    <!-- ========================================== -->
+    <div class="progress-container">
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill" style="width: 0%">0%</div>
+        </div>
+        <div class="progress-text" id="progressText">Progreso general</div>
+    </div>
     
+    <!-- ========================================== -->
+    <!-- BOTONES DE PERSONA                         -->
+    <!-- ========================================== -->
     <div style="text-align:center; margin: 15px 0;">
         <button id="alejandroBtn" class="btn-alejandro active">👤 Alejandro</button>
         <button id="marthaBtn" class="btn-martha">👤 Martha</button>
@@ -71,44 +98,34 @@
     </div>
     
     <!-- ========================================== -->
-    <!-- CONTROLES DE LOTES (PAGINACIÓN)           -->
+    <!-- CONTROLES DE LOTES                         -->
     <!-- ========================================== -->
     <div class="batch-control">
         <button id="btnAnterior" class="batch-btn">◀ ANTERIOR</button>
         <span class="batch-info" id="loteInfo">Lote 1 / 1</span>
         <button id="btnSiguiente" class="batch-btn">SIGUIENTE ▶</button>
-        <div class="lote-selector">
-            <label>Ir al lote:</label>
-            <select id="selectorLote"></select>
-        </div>
     </div>
     
+    <!-- ========================================== -->
+    <!-- MAPA DE CALOR                              -->
+    <!-- ========================================== -->
     <div id="grid" class="grid"></div>
     
     <div style="margin-top:15px; padding:10px; background:#e8f4fd; border-radius:8px; text-align:center; font-size:12px;">
-        💡 <strong>Navegación por lotes:</strong> Cada lote muestra hasta 5,000 registros. Usa los botones para navegar.
+        💡 Haz clic en una casilla para marcar/desmarcar el error.
     </div>
 </div>
 
 <script>
-    // 🔴 🔴 🔴 CAMBIA ESTA URL POR LA TUYA 🔴 🔴 🔴
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw_HswVXRcpuRpA-2sk-VYdpp7NFgX9J7tNrasdqMzR-7Foi9daMhXwxcww9MeJwh9y/exec";
+    // 🔴 CAMBIA ESTA URL POR LA TUYA
+    const SCRIPT_URL = "https://script.google.com/macros/s/TU_ID_AQUI/exec";
     
-    // ========================================
-    // TUS ERRORES - PONER AQUÍ TODOS
-    // ========================================
+    // ==========================================
+    // TUS ERRORES - PEGA AQUÍ TODOS
+    // ==========================================
     const errores = new Map();
     
-    // ========================================
-    // PEGA AQUÍ TODOS TUS REGISTROS:
-    // errores.set(220, "Año");
-    // errores.set(714, "Año");
-    // errores.set(13741, "Idioma");
-    // ... y así sucesivamente
-    // ========================================
-
-    
-    errores.set(220, "Año");
+        errores.set(220, "Año");
 errores.set(714, "Año");
 errores.set(786, "Año");
 errores.set(992, "Año");
@@ -58893,24 +58910,22 @@ errores.set(262698, "Idioma");
 errores.set(262699, "Idioma");
 errores.set(262700, "Idioma");
 errores.set(262739, "Mayúscula");
-errores.set(262742, "Mayúscula");
-
-    // ... sigue con todos
+errores.set(262742, "Mayúscula"); 
+    // ... sigue agregando
     
-    // ========================================
+    // ==========================================
     // NO CAMBIES NADA DEBAJO
-    // ========================================
+    // ==========================================
     
     let correcciones = new Map();
     let personaActual = "alejandro";
     let loteActual = 1;
-    let REGISTROS_POR_LOTE = 5000;  // 5,000 registros por lote
+    let REGISTROS_POR_LOTE = 5000;
     
     const todosIds = Array.from(errores.keys()).sort((a,b) => a-b);
     const TOTAL = todosIds.length;
     const TOTAL_LOTES = Math.ceil(TOTAL / REGISTROS_POR_LOTE);
     
-    // Obtener IDs del lote actual
     function getIdsLote() {
         const inicio = (loteActual - 1) * REGISTROS_POR_LOTE;
         const fin = Math.min(inicio + REGISTROS_POR_LOTE, TOTAL);
@@ -58950,39 +58965,6 @@ errores.set(262742, "Mayúscula");
         }
     }
     
-    async function guardar(id, persona) {
-        const nombrePersona = persona === "alejandro" ? "Alejandro" : "Martha";
-        const accion = "MARCADO";
-        
-        document.getElementById('syncStatus').innerHTML = "💾 Guardando...";
-        
-        const url = `${SCRIPT_URL}?id=${id}&persona=${encodeURIComponent(nombrePersona)}&accion=${accion}`;
-        
-        try {
-            await fetch(url);
-            console.log("✅ Guardado:", id, nombrePersona);
-            await cargar();
-        } catch(e) {
-            console.error("Error:", e);
-            document.getElementById('syncStatus').innerHTML = "⚠️ Error al guardar";
-        }
-    }
-    
-    async function eliminar(id) {
-        document.getElementById('syncStatus').innerHTML = "🗑️ Eliminando...";
-        
-        const url = `${SCRIPT_URL}?id=${id}&persona=`;
-        
-        try {
-            await fetch(url);
-            console.log("✅ Eliminado:", id);
-            await cargar();
-        } catch(e) {
-            console.error("Error:", e);
-            document.getElementById('syncStatus').innerHTML = "⚠️ Error al eliminar";
-        }
-    }
-    
     function actualizarStats() {
         let a = 0, m = 0;
         for (let info of correcciones.values()) {
@@ -58992,12 +58974,13 @@ errores.set(262742, "Mayúscula");
         const pend = TOTAL - a - m;
         const porc = ((a + m) / TOTAL) * 100;
         
-        document.getElementById('total').textContent = TOTAL;
-        document.getElementById('alejandroCount').textContent = a;
-        document.getElementById('marthaCount').textContent = m;
-        document.getElementById('pendienteCount').textContent = pend;
+        document.getElementById('total').textContent = TOTAL.toLocaleString();
+        document.getElementById('alejandroCount').textContent = a.toLocaleString();
+        document.getElementById('marthaCount').textContent = m.toLocaleString();
+        document.getElementById('pendienteCount').textContent = pend.toLocaleString();
         document.getElementById('progressFill').style.width = porc + "%";
-        document.getElementById('progressFill').textContent = porc.toFixed(1) + "%";
+        document.getElementById('progressFill').innerHTML = porc.toFixed(1) + "%";
+        document.getElementById('progressText').innerHTML = `📈 ${(a + m).toLocaleString()} de ${TOTAL.toLocaleString()} errores corregidos (${porc.toFixed(1)}%)`;
     }
     
     function actualizarControlesLote() {
@@ -59005,23 +58988,7 @@ errores.set(262742, "Mayúscula");
         const fin = Math.min(loteActual * REGISTROS_POR_LOTE, TOTAL);
         const primerId = todosIds[inicio - 1];
         const ultimoId = todosIds[fin - 1];
-        
         document.getElementById('loteInfo').innerHTML = `Lote ${loteActual} de ${TOTAL_LOTES} (IDs ${primerId} - ${ultimoId})`;
-        
-        // Actualizar selector
-        const selector = document.getElementById('selectorLote');
-        selector.innerHTML = "";
-        for (let i = 1; i <= TOTAL_LOTES; i++) {
-            const option = document.createElement('option');
-            option.value = i;
-            const inicioLote = (i - 1) * REGISTROS_POR_LOTE + 1;
-            const finLote = Math.min(i * REGISTROS_POR_LOTE, TOTAL);
-            const primerIdLote = todosIds[inicioLote - 1];
-            const ultimoIdLote = todosIds[finLote - 1];
-            option.textContent = `Lote ${i} (${primerIdLote}-${ultimoIdLote})`;
-            if (i === loteActual) option.selected = true;
-            selector.appendChild(option);
-        }
     }
     
     function cambiarLote(delta) {
@@ -59033,10 +59000,17 @@ errores.set(262742, "Mayúscula");
         }
     }
     
-    function irALote(lote) {
-        loteActual = parseInt(lote);
-        dibujar();
-        actualizarControlesLote();
+    async function guardar(id, persona) {
+        const nombrePersona = persona === "alejandro" ? "Alejandro" : "Martha";
+        const url = `${SCRIPT_URL}?id=${id}&persona=${encodeURIComponent(nombrePersona)}&accion=MARCADO`;
+        await fetch(url);
+        await cargar();
+    }
+    
+    async function eliminar(id) {
+        const url = `${SCRIPT_URL}?id=${id}&persona=`;
+        await fetch(url);
+        await cargar();
     }
     
     function getColor(tipo) {
@@ -59050,9 +59024,7 @@ errores.set(262742, "Mayúscula");
         const grid = document.getElementById('grid');
         grid.innerHTML = "";
         
-        const idsLote = getIdsLote();
-        
-        for (let id of idsLote) {
+        for (let id of getIdsLote()) {
             const tipo = errores.get(id);
             const info = correcciones.get(id);
             const corregido = info ? info.persona : null;
@@ -59063,20 +59035,12 @@ errores.set(262742, "Mayúscula");
             if (corregido === "martha") clase += " cell-corregido-martha";
             celda.className = clase;
             celda.textContent = id;
-            
-            if (info && info.fecha) {
-                celda.title = `Registro ${id} | ${info.persona === "alejandro" ? "Alejandro" : "Martha"} | ${info.fecha}`;
-            } else {
-                celda.title = `Registro ${id} - Error: ${tipo} - Pendiente`;
-            }
+            celda.title = info ? `Corregido por ${info.persona} el ${info.fecha}` : `Pendiente - Error: ${tipo}`;
             
             celda.onclick = (function(pid) {
                 return async function() {
-                    const ya = correcciones.has(pid);
-                    if (ya) {
-                        if (confirm(`¿Desmarcar registro ${pid}?`)) {
-                            await eliminar(pid);
-                        }
+                    if (correcciones.has(pid)) {
+                        if (confirm(`¿Desmarcar registro ${pid}?`)) await eliminar(pid);
                     } else {
                         await guardar(pid, personaActual);
                     }
@@ -59087,27 +59051,22 @@ errores.set(262742, "Mayúscula");
         }
     }
     
-    // Eventos
     document.getElementById('alejandroBtn').onclick = () => {
         personaActual = "alejandro";
         document.getElementById('alejandroBtn').classList.add('active');
         document.getElementById('marthaBtn').classList.remove('active');
     };
-    
     document.getElementById('marthaBtn').onclick = () => {
         personaActual = "martha";
         document.getElementById('marthaBtn').classList.add('active');
         document.getElementById('alejandroBtn').classList.remove('active');
     };
-    
     document.getElementById('syncBtn').onclick = () => cargar();
     document.getElementById('btnAnterior').onclick = () => cambiarLote(-1);
     document.getElementById('btnSiguiente').onclick = () => cambiarLote(1);
-    document.getElementById('selectorLote').onchange = (e) => irALote(e.target.value);
     
-    // Iniciar
     cargar();
     setInterval(cargar, 5000);
 </script>
 </body>
-</html>
+</html> 
