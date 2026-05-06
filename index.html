@@ -30,6 +30,7 @@
         .sync-status { text-align: center; padding: 8px; margin: 10px; border-radius: 8px; font-size: 12px; }
         .synced { background: #d5f4e6; color: #27ae60; }
         .syncing { background: #ffeaa7; color: #f39c12; }
+        .error { background: #fadbd8; color: #e74c3c; }
         @media (max-width: 900px) { .grid { grid-template-columns: repeat(30, 50px); } .cell { width: 50px; height: 50px; font-size: 8px; } }
     </style>
 </head>
@@ -37,7 +38,7 @@
 <div class="container">
     <h2>📊 Mapa de Calor - Sincronizado</h2>
     
-    <div id="syncStatus" class="sync-status syncing">🔄 Conectando...</div>
+    <div id="syncStatus" class="sync-status syncing">🔄 Conectando con la nube...</div>
     
     <div class="stats">
         <div class="stat-card"><div class="stat-number" id="totalRegistros">0</div><div>Total</div></div>
@@ -52,6 +53,7 @@
         <button id="alejandroBtn" class="btn-alejandro active">👤 Alejandro</button>
         <button id="marthaBtn" class="btn-martha">👤 Martha</button>
         <button id="exportarBtn" class="btn-exportar">📊 Exportar</button>
+        <button id="sincButton" style="background:#3498db; color:white;">🔄 Sincronizar ahora</button>
     </div>
     
     <div style="text-align: center; margin: 15px;">
@@ -69,23 +71,23 @@
 
 <script>
     // ============================================
-    // 🔴 ¡¡¡CAMBIAR ESTA URL!!!
-    // Pega aquí la URL que copiaste de Google Apps Script
+    // 🔴 ¡¡¡IMPORTANTE!!! 
+    // Pega aquí la URL que te dio Google Apps Script
+    // Debe verse así: https://script.google.com/macros/s/XXXXXX/exec
     // ============================================
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwJm7wcSIRp34o5PfQhZMCg25N-BoMjanJbDWoUmUXe3PA_2IxhZrlShsM33PK3q4cs/exec";
-    //                        ↑↑↑ CAMBIA ESTO ↑↑↑
     
     // ============================================
-    // TUS REGISTROS DE ERRORES
+    // TUS REGISTROS DE ERRORES (PEGA AQUÍ TU LISTA)
     // ============================================
     let errores = new Map();
     
     function agregarError(id, tipo) {
-        errores.set(id, tipo);
+        errores.set(parseInt(id), tipo);
     }
     
     // ============================================
-    // PEGA AQUÍ TODOS TUS REGISTROS
+    // EJEMPLOS - REEMPLAZA CON TUS 58,000 REGISTROS
     // ============================================
     agregarError(220, "Año");
     agregarError(714, "Año");
@@ -95,64 +97,124 @@
     agregarError(13741, "Idioma");
     agregarError(20768, "Mayúscula");
     agregarError(21225, "Mayúscula");
-
-    // ... CONTINÚA CON TUS 58,000 REGISTROS
+    agregarError(21259, "Mayúscula");
+    agregarError(24043, "Idioma");
+    agregarError(30049, "Mayúscula");
+    agregarError(38991, "Mayúscula");
+    agregarError(40614, "Idioma");
+    agregarError(41087, "Mayúscula");
+    agregarError(43143, "Año");
+    agregarError(43284, "Idioma");
+    agregarError(43957, "Idioma");
+    agregarError(58555, "Idioma");
+    agregarError(59063, "Idioma");
+    // ... CONTINÚA AGREGANDO TODOS TUS REGISTROS
     
     // ============================================
-    // SISTEMA DE SINCRONIZACIÓN
+    // SISTEMA PRINCIPAL
     // ============================================
-    let correcciones = new Map();
+    let correcciones = new Map();  // id -> persona
     let personaActual = 'alejandro';
     let loteActual = 0;
     let sincronizando = false;
     
+    // Lista de todos los IDs ordenados
     let todosLosIds = Array.from(errores.keys()).sort((a,b) => a-b);
     let TOTAL_REGISTROS = todosLosIds.length;
     let REGISTROS_POR_LOTE = 4000;
     let TOTAL_LOTES = Math.ceil(TOTAL_REGISTROS / REGISTROS_POR_LOTE);
     
-    async function guardarEnCloud(id, persona, accion) {
+    // ============================================
+    // GUARDAR EN GOOGLE SHEETS
+    // ============================================
+    async function guardarEnCloud(id, persona, tipoAccion) {
         try {
-            await fetch(SCRIPT_URL, {
+            // Primero, obtener las correcciones actuales desde la nube
+            const responseGet = await fetch(SCRIPT_URL);
+            const dataGet = await responseGet.json();
+            
+            // Verificar si ya existe este ID
+            let existe = false;
+            let correccionesActuales = [];
+            
+            if (dataGet.correcciones) {
+                for (let item of dataGet.correcciones) {
+                    if (parseInt(item.id) === id) {
+                        existe = true;
+                        if (tipoAccion === "eliminar") {
+                            // No agregar a la lista
+                            continue;
+                        } else {
+                            correccionesActuales.push([id, persona]);
+                        }
+                    } else {
+                        correccionesActuales.push([parseInt(item.id), item.persona.toLowerCase()]);
+                    }
+                }
+            }
+            
+            // Si no existe y es para agregar
+            if (!existe && tipoAccion !== "eliminar") {
+                correccionesActuales.push([id, persona]);
+            }
+            
+            // Guardar todas las correcciones en la hoja (a través de una función en Apps Script)
+            // Por ahora, usamos POST individual
+            const response = await fetch(SCRIPT_URL, {
                 method: 'POST',
-                mode: 'cors',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    accion: accion,
+                    accion: tipoAccion,
                     id: id.toString(),
                     persona: persona
                 })
             });
+            
+            const resultado = await response.text();
+            console.log("✅ Guardado:", id, persona, tipoAccion);
+            
         } catch(e) {
-            console.log('Error al guardar:', e);
+            console.error("❌ Error al guardar:", e);
+            document.getElementById('syncStatus').innerHTML = '⚠️ Error al guardar';
+            document.getElementById('syncStatus').className = 'sync-status error';
         }
     }
     
+    // ============================================
+    // CARGAR DESDE GOOGLE SHEETS
+    // ============================================
     async function cargarDesdeCloud() {
         sincronizando = true;
-        document.getElementById('syncStatus').innerHTML = '🔄 Sincronizando...';
+        document.getElementById('syncStatus').innerHTML = '🔄 Cargando desde la nube...';
         document.getElementById('syncStatus').className = 'sync-status syncing';
         
         try {
             const response = await fetch(SCRIPT_URL);
             const data = await response.json();
             
+            console.log("📥 Datos recibidos:", data);
+            
             if (data.correcciones) {
                 correcciones.clear();
                 for (let item of data.correcciones) {
                     const idNum = parseInt(item.id);
                     if (!isNaN(idNum)) {
-                        correcciones.set(idNum, item.persona.toLowerCase());
+                        const personaNorm = item.persona ? item.persona.toLowerCase() : '';
+                        correcciones.set(idNum, personaNorm);
+                        console.log(`   Cargado: ID ${idNum} -> ${personaNorm}`);
                     }
                 }
-                console.log('✅ Cargados', correcciones.size, 'registros desde la nube');
+                console.log(`✅ Cargados ${correcciones.size} registros desde la nube`);
+                document.getElementById('syncStatus').innerHTML = '🟢 Sincronizado - ' + correcciones.size + ' correcciones cargadas';
+                document.getElementById('syncStatus').className = 'sync-status synced';
+            } else {
+                console.log("⚠️ No hay correcciones en la nube");
+                document.getElementById('syncStatus').innerHTML = '🟢 Conectado - Sin correcciones guardadas';
+                document.getElementById('syncStatus').className = 'sync-status synced';
             }
-            
-            document.getElementById('syncStatus').innerHTML = '🟢 Sincronizado';
-            document.getElementById('syncStatus').className = 'sync-status synced';
         } catch(e) {
-            console.log('Error al cargar:', e);
-            document.getElementById('syncStatus').innerHTML = '⚠️ Offline - Usando datos locales';
+            console.error("❌ Error al cargar:", e);
+            document.getElementById('syncStatus').innerHTML = '⚠️ Error de conexión - Usando datos locales';
             document.getElementById('syncStatus').className = 'sync-status error';
         }
         
@@ -161,6 +223,9 @@
         dibujarGrid();
     }
     
+    // ============================================
+    // ACTUALIZAR ESTADÍSTICAS
+    // ============================================
     function actualizarEstadisticas() {
         let corrAlejandro = 0, corrMartha = 0;
         for (let persona of correcciones.values()) {
@@ -179,6 +244,9 @@
         document.getElementById('loteInfo').innerHTML = `Lote ${loteActual + 1}/${TOTAL_LOTES}`;
     }
     
+    // ============================================
+    // COLORES POR TIPO DE ERROR
+    // ============================================
     function getClassForError(tipo) {
         switch(tipo) {
             case 'Año': return 'cell-error-Año';
@@ -188,6 +256,9 @@
         }
     }
     
+    // ============================================
+    // DIBUJAR EL GRID
+    // ============================================
     function dibujarGrid() {
         const inicioLote = loteActual * REGISTROS_POR_LOTE;
         const finLote = Math.min(inicioLote + REGISTROS_POR_LOTE, TOTAL_REGISTROS);
@@ -208,21 +279,22 @@
             
             celda.className = className;
             celda.textContent = id;
-            celda.title = `Registro ${id} - Error: ${tipoError}`;
+            celda.title = `Registro ${id} - Error: ${tipoError}${personaCorrectora ? ` ✓ Corregido por ${personaCorrectora === 'alejandro' ? 'Alejandro' : 'Martha'}` : ' ❌ Pendiente'}`;
             
             celda.onclick = (function(registroId) {
                 return async function() {
                     const yaCorregido = correcciones.has(registroId);
                     const nombrePersona = personaActual === 'alejandro' ? 'Alejandro' : 'Martha';
+                    const personaKey = personaActual === 'alejandro' ? 'alejandro' : 'martha';
                     
                     if (yaCorregido) {
-                        if (confirm(`¿Desmarcar registro ${registroId}?`)) {
+                        if (confirm(`¿Estás seguro de desmarcar el registro ${registroId}?`)) {
                             correcciones.delete(registroId);
                             await guardarEnCloud(registroId, "", "eliminar");
                             await cargarDesdeCloud();
                         }
                     } else {
-                        correcciones.set(registroId, personaActual);
+                        correcciones.set(registroId, personaKey);
                         await guardarEnCloud(registroId, nombrePersona, "marcar");
                         await cargarDesdeCloud();
                     }
@@ -233,6 +305,9 @@
         }
     }
     
+    // ============================================
+    // CAMBIAR LOTE
+    // ============================================
     function cambiarLote(delta) {
         const nuevoLote = loteActual + delta;
         if (nuevoLote >= 0 && nuevoLote < TOTAL_LOTES) {
@@ -242,6 +317,9 @@
         }
     }
     
+    // ============================================
+    // EXPORTAR DATOS
+    // ============================================
     function exportarDatos() {
         let csv = "ID_Registro,Tipo_Error,Corregido_Persona\n";
         for (let id of todosLosIds) {
@@ -258,7 +336,9 @@
         alert('✅ Archivo exportado');
     }
     
-    // Eventos
+    // ============================================
+    // EVENTOS DE BOTONES
+    // ============================================
     document.getElementById('alejandroBtn').onclick = () => {
         personaActual = 'alejandro';
         document.getElementById('alejandroBtn').classList.add('active');
@@ -272,8 +352,11 @@
     document.getElementById('loteAnteriorBtn').onclick = () => cambiarLote(-1);
     document.getElementById('loteSiguienteBtn').onclick = () => cambiarLote(1);
     document.getElementById('exportarBtn').onclick = exportarDatos;
+    document.getElementById('sincButton').onclick = () => cargarDesdeCloud();
     
-    // Inicializar
+    // ============================================
+    // INICIALIZAR
+    // ============================================
     document.getElementById('alejandroBtn').classList.add('active');
     actualizarEstadisticas();
     dibujarGrid();
@@ -281,8 +364,12 @@
     // Cargar datos de la nube
     cargarDesdeCloud();
     
-    // Auto-sincronizar cada 5 segundos
-    setInterval(cargarDesdeCloud, 5000);
+    // Auto-sincronizar cada 10 segundos
+    setInterval(cargarDesdeCloud, 10000);
+    
+    console.log("🚀 Mapa iniciado");
+    console.log("📊 Total de errores:", TOTAL_REGISTROS);
+    console.log("🔗 URL de sincronización:", SCRIPT_URL);
 </script>
 </body>
 </html>
